@@ -228,7 +228,7 @@ function ghApi(path, opt){
   return fetch('https://api.github.com/repos/'+GH.repo+'/'+path+(opt.method ? '' : (path.indexOf('?') < 0 ? '?' : '&')+'t='+Date.now()),
                {method:opt.method || 'GET', headers:h, cache:'no-store', body:opt.body ? JSON.stringify(opt.body) : undefined})
     .then(function(r){
-      if(r.status === 401){ ghGate('通行碼失效或打錯了，請重新貼一次'); throw new Error('通行碼失效'); }
+      if(r.status === 401){ ghGate('通行碼失效或打錯了，請重新貼一次'); throw new Error('通行碼失效或打錯了，請重新貼一次'); }
       if(r.status === 404 && !opt.method) throw new Error('讀不到留言（通行碼可能沒勾到 reply-data 這個 repo）');
       if(r.status === 403 || r.status === 404) throw new Error('這組通行碼沒有寫入權限（要選 Contents：Read and write）');
       if(r.status === 409 || r.status === 422) throw Object.assign(new Error('GitHub 正在忙'), {again:true});
