@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="留言回覆">
+<meta name="theme-color" content="#f5f2ec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141413" media="(prefers-color-scheme: dark)">
+<title>留言回覆</title>
+<link rel="icon" href="icon.png?v=1"><meta name="robots" content="noindex">
+<link rel="apple-touch-icon" href="icon.png?v=1">
+<!-- 11/2：YT（好奇心研究所）＋Threads（@yilan_kafka）合成一個收件匣（kafu_reply.py）；11/3 加 IG（kafu_igc.py）。版型＝他選的「2 雙欄收件匣」；
+     手機（≤860px）改成清單→點進單則→返回。送出按兩下確認、送完跳下一則；每則與送出鈕都寫明用哪個帳號。 -->
+<style>
+:root{
+  --bg:#f5f2ec;--panel:#fffdf9;--panel2:#faf7f1;--ink:#22201c;--ink2:#4a4640;--mute:#8a847a;--line:#e8e2d7;--line2:#efeae1;
+  --brand:#1f5c4d;--brand2:#e3eee9;--onbrand:#fff;
+  --red:#b8432f;--redbg:#f8e6e1;--amber:#946200;--amberbg:#f8edd6;--green:#2c7a52;--greenbg:#e2f1e8;
+  --yt:#c4302b;--ytbg:#fbe7e5;--th:#22201c;--thbg:#ebe7e0;--ig:#c13584;--igbg:#f9e4ef;
+  --sel:#efe8dc;--shadow:0 1px 2px rgba(40,30,10,.05),0 8px 24px rgba(40,30,10,.06);--r:14px}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#141413;--panel:#1c1c1a;--panel2:#20201e;--ink:#ecebe7;--ink2:#c9c6bf;--mute:#8f8b83;--line:#2f2e2b;--line2:#272624;
+  --brand:#7cc4ad;--brand2:#1d3530;--onbrand:#0f1f1a;
+  --red:#ff8b75;--redbg:#3a201b;--amber:#f0bd5c;--amberbg:#342811;--green:#74cf9b;--greenbg:#16301f;
+  --yt:#ff7a6e;--ytbg:#3a1d1b;--th:#ecebe7;--thbg:#2c2b28;--ig:#f27fbf;--igbg:#3a1a2c;
+  --sel:#282724;--shadow:none}}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15.5px/1.65 -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif;-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit}
+a{color:inherit}
+.app{max-width:1240px;margin:0 auto;padding:0 20px 40px}
+.top{display:flex;align-items:center;gap:14px;padding:18px 0 14px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.logo{width:40px;height:40px;border-radius:12px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:800;font-size:19px;flex:none}
+.brand h1{font-size:19px;margin:0;line-height:1.25}
+.brand small{display:block;color:var(--mute);font-size:13px}
+.sp{flex:1}
+.src{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:5px}
+.src button{display:flex;align-items:center;justify-content:center;gap:7px;border:1.5px solid transparent;background:none;border-radius:10px;padding:8px 14px;font-size:15px;font-weight:650;color:var(--ink2);cursor:pointer;white-space:nowrap;transition:background .15s,color .15s}
+.src button:hover:not(.on){background:var(--panel2)}
+.src button svg{width:20px;height:20px;flex:none}
+.src button b{font-weight:750;font-size:12.5px;min-width:22px;height:22px;border-radius:99px;display:inline-grid;place-items:center;padding:0 6px;background:var(--line2);color:var(--ink2)}
+.src button[data-s=all] svg{color:var(--brand)}
+.src button[data-s=yt] svg{color:#ff0033}
+.src button[data-s=th] svg{color:var(--th)}
+.src button[data-s=ig] svg{color:var(--ig)}
+.src button.on[data-s=all]{background:var(--brand);color:var(--onbrand)}
+.src button.on[data-s=yt]{background:#e8182e;color:#fff}
+.src button.on[data-s=th]{background:var(--th);color:var(--bg)}
+.src button.on[data-s=ig]{background:linear-gradient(45deg,#f09433,#dc2743 45%,#bc1888);color:#fff}
+.src button.on svg{color:inherit}
+.src button.on b{background:rgba(255,255,255,.25);color:inherit}
+.src button.on[data-s=yt] svg .play{fill:#e8182e}
+.meters{display:flex;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:7px 14px}
+.meters .cap{font-size:12px;color:var(--mute);line-height:1.3}
+.meter{min-width:96px}
+.meter .l{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);gap:8px}
+.meter .l b{color:var(--ink);font-weight:650}
+.meter .t{height:5px;border-radius:9px;background:var(--line2);overflow:hidden;margin-top:4px}
+.meter .t i{display:block;height:100%;border-radius:9px;background:var(--brand);transition:width .3s}
+.meter.hot .t i{background:var(--amber)}.meter.full .t i{background:var(--red)}
+.draftbtn{border:none;background:linear-gradient(135deg,var(--brand),#2f7d63);color:#fff;font-weight:750;border-radius:12px;padding:10px 18px;font-size:15px;cursor:pointer;white-space:nowrap;box-shadow:0 2px 10px rgba(31,92,77,.25)}
+.draftbtn:disabled{opacity:.7;cursor:wait}
+.jobbar>div{display:flex;align-items:center;gap:10px;border-radius:12px;padding:10px 14px;font-size:14px;margin-bottom:12px}
+.jobbar .run{background:var(--brand2);color:var(--brand)}
+.jobbar .ok{background:var(--greenbg);color:var(--green)}
+.jobbar .bad{background:var(--redbg);color:var(--red)}
+.jobbar .x{margin-left:auto;border:none;background:none;color:inherit;opacity:.6;cursor:pointer;font-size:16px}
+.spin{width:16px;height:16px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;animation:sp .8s linear infinite;flex:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-color-scheme:dark){.draftbtn{color:#0f1f1a}}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:8px 14px;font-size:14.5px;cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--ink2)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.notice{background:var(--amberbg);color:var(--amber);border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:14px}
+.setup{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.setup h2{font-size:17px;margin:0 0 8px}
+.setup ol{margin:0 0 12px;padding-left:22px;color:var(--ink2)}
+.setup input{width:100%;font:inherit;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:2px 0 10px}
+.main{display:grid;grid-template-columns:370px minmax(0,1fr);gap:18px;align-items:start}
+.side{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);position:sticky;top:14px;max-height:calc(100vh - 28px);display:flex;flex-direction:column;overflow:hidden}
+.seg{flex:none;display:flex;flex-wrap:wrap;gap:4px 2px;padding:10px;border-bottom:1px solid var(--line2)}
+.seg button{border:none;background:none;border-radius:9px;padding:6px 10px;font-size:13.5px;color:var(--mute);cursor:pointer;white-space:nowrap}
+.seg button b{font-weight:600;margin-left:4px;font-size:12px;background:var(--line2);border-radius:99px;padding:0 6px;color:var(--ink2)}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.seg button.on b{background:rgba(255,255,255,.18);color:inherit}
+.list{overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch}
+.li{display:flex;gap:11px;padding:12px 14px;border-bottom:1px solid var(--line2);cursor:pointer;position:relative}
+.li:hover{background:var(--panel2)}
+.li.on{background:var(--sel)}
+.li.on::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--brand)}
+.li .bd{min-width:0;flex:1}
+.li .nm{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:650}
+.li .nm span.u{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.li .nm time{margin-left:auto;font-weight:400;font-size:12px;color:var(--mute);flex:none}
+.li .pv{font-size:13.5px;color:var(--ink2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:2px}
+.li .pp{font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
+.pill{flex:none;font-size:11px;font-weight:650;border-radius:99px;padding:1px 7px;line-height:1.6}
+.pill.red{background:var(--redbg);color:var(--red)}.pill.amber{background:var(--amberbg);color:var(--amber)}
+.pill.green{background:var(--greenbg);color:var(--green)}
+.acct{flex:none;font-size:10.5px;font-weight:750;border-radius:5px;padding:0 5px;line-height:1.7;letter-spacing:.2px}
+.acct.yt{background:var(--ytbg);color:var(--yt)}.acct.th{background:var(--thbg);color:var(--th)}.acct.ig{background:var(--igbg);color:var(--ig)}
+.av{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;color:#fff;position:relative}
+.av.lg{width:44px;height:44px;font-size:17px}
+.av img{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover}
+.empty{padding:40px 20px;text-align:center;color:var(--mute);font-size:14px}
+.pane{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);min-height:420px;display:flex;flex-direction:column}
+.pane .in{padding:22px 26px 8px;flex:1}
+.back{display:none}
+.ctx{display:flex;gap:10px;align-items:flex-start;background:var(--panel2);border:1px solid var(--line2);border-radius:12px;padding:10px 12px;font-size:13.5px;color:var(--ink2);margin-bottom:18px}
+.ctx .k{flex:none;font-size:12px;color:var(--mute);font-weight:600;padding-top:1px}
+.ctx a{text-decoration:none}.ctx a:hover{text-decoration:underline}
+.ctx .to{display:block;color:var(--mute);margin-top:4px}
+.who{display:flex;align-items:center;gap:12px}
+.who .n{font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.who .m{font-size:13px;color:var(--mute)}
+.who .m a{color:var(--mute)}
+.ctext{font-size:19px;line-height:1.75;white-space:pre-wrap;margin:12px 0 4px;word-break:break-word}
+.others{margin:12px 0 0 22px;border-left:2px solid var(--line);padding-left:14px}
+.others div{font-size:14px;color:var(--ink2);margin:4px 0}
+.others b{font-weight:650}.others .own b{color:var(--brand)}
+.divider{height:1px;background:var(--line2);margin:20px 0 16px}
+.tip{border-radius:10px;padding:9px 12px;font-size:14px;line-height:1.55;margin-bottom:14px}
+.tip.red{background:var(--redbg);color:var(--red)}.tip.amber{background:var(--amberbg);color:var(--amber)}.tip.gray{background:var(--panel2);color:var(--ink2);border:1px solid var(--line2)}.tip.green{background:var(--greenbg);color:var(--green)}
+.lbl{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:650;color:var(--ink2);margin-bottom:8px}
+.lbl span{font-weight:400;color:var(--mute)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.chips button{border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:4px 12px;font-size:13px;color:var(--ink2);cursor:pointer}
+.chips button.on{background:var(--brand2);border-color:var(--brand);color:var(--brand);font-weight:650}
+.chips button.more{border-style:dashed;color:var(--mute)}
+textarea{width:100%;min-height:110px;font:inherit;font-size:16.5px;line-height:1.7;color:var(--ink);background:var(--panel2);border:1.5px solid var(--line);border-radius:12px;padding:13px 15px;resize:vertical}
+textarea:focus{outline:none;border-color:var(--brand);background:var(--panel)}
+textarea.bad{border-color:var(--red)}
+.meta{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--mute);margin-top:6px;min-height:20px}
+.meta .warn{color:var(--red);font-weight:650}.meta .ok{color:var(--green)}
+.sentbox{background:var(--greenbg);border-radius:12px;padding:14px 16px}
+.sentbox .h{color:var(--green);font-weight:700;font-size:14px;margin-bottom:4px}
+.sentbox .x{white-space:pre-wrap}
+.foot{display:flex;align-items:center;gap:10px;padding:14px 26px;border-top:1px solid var(--line2);background:var(--panel);border-radius:0 0 var(--r) var(--r);position:sticky;bottom:0}
+.ghost{border:none;background:none;color:var(--mute);font-size:14px;cursor:pointer;padding:8px 6px;border-radius:8px;white-space:nowrap}
+.ghost:hover{color:var(--ink);background:var(--panel2)}
+.nav{display:flex;gap:6px}
+.send{white-space:nowrap;border:none;background:var(--brand);color:var(--onbrand);font-weight:700;border-radius:11px;padding:11px 20px;min-width:170px;font-size:15px;cursor:pointer;line-height:1.3}
+.send small{display:block;font-weight:500;font-size:11.5px;opacity:.85}
+.send:disabled{opacity:.35;cursor:not-allowed}
+.send.confirm{background:var(--green);color:#fff;box-shadow:0 0 0 4px var(--greenbg)}
+.err{margin:0 26px 12px;background:var(--redbg);color:var(--red);border-radius:10px;padding:9px 12px;font-size:14px;display:none}
+.err.show{display:block}
+.toast{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom));transform:translate(-50%,10px);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:9;max-width:90vw}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.keys{font-size:12px;color:var(--mute);text-align:center;padding:8px;border-top:1px solid var(--line2)}
+kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 4px;font:inherit;font-size:11px;background:var(--panel)}
+/* 手機：清單 ↔ 單則 */
+@media (max-width:860px){
+  .app{padding:0 12px calc(24px + env(safe-area-inset-bottom))}
+  .top{padding:14px 2px 10px;gap:10px}
+  .brand small{display:none}
+  .top .sp{display:none}
+  .src{order:3;width:100%}.src button{flex:1}
+  .meters{order:4;width:100%;justify-content:space-between}
+  #refetch{margin-left:auto}
+  .jobbar{margin:0 0 10px}
+  .main{grid-template-columns:1fr}
+  .side{position:static;max-height:none}
+  .list{overflow:visible}
+  .keys{display:none}
+  .pane{display:none;min-height:0}
+  body.detail .side,body.detail .top,body.detail #notice{display:none}
+  body.detail .pane{display:flex;border-radius:0;border:none;box-shadow:none;margin:0 -12px;min-height:100vh}
+  .back{display:flex;align-items:center;gap:6px;position:sticky;top:0;z-index:3;background:var(--panel);padding:calc(10px + env(safe-area-inset-top)) 14px 10px;border-bottom:1px solid var(--line2);font-size:15px}
+  .back button{border:none;background:none;color:var(--brand);font-weight:650;padding:6px 4px;cursor:pointer}
+  .pane .in{padding:16px 16px 6px}
+  .ctext{font-size:18px}
+  .foot{padding:10px 14px calc(10px + env(safe-area-inset-bottom));border-radius:0}
+  .foot .nav{display:none}
+  .send{min-width:0;flex:1}
+  .err{margin:0 14px 10px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="brand"><div class="logo">💬</div><div><h1>留言回覆</h1><small id="sub"></small></div></div>
+    <span class="sp"></span>
+    <div class="src" id="src"></div>
+    <div class="meters" id="meters"></div>
+    <button class="draftbtn" id="refetch">✨ 抓新留言＋擬草稿</button>
+  </div>
+  <div class="jobbar" id="jobbar"></div>
+  <div id="notice"></div>
+  <div class="main">
+    <aside class="side"><div class="seg" id="seg"></div><div class="list" id="list"></div>
+      <div class="keys"><kbd>↑</kbd> <kbd>↓</kbd> 換一則（打字時不算）</div></aside>
+    <section class="pane" id="pane"></section>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<!-- 2026-11-04 留言回覆手機版（GitHub Pages）專用：kafu_reply_sync.py 把這段插在主程式前面。
+     資料在私人 repo，手機第一次貼通行碼（fine-grained token，只能讀寫那一個 repo）存在手機裡；
+     讀：reply.json；寫：每個動作丟成 inbox/<時間>.json，iMac 每分鐘套用。送出會進隊伍，由 iMac 慢慢放，不會一次全送。 -->
+<style>
+.gate{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;align-items:flex-start;justify-content:center;padding:12vh 16px 16px}
+.gate .gb{width:100%;max-width:440px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 22px;box-shadow:var(--shadow)}
+.gate h2{font-size:22px;margin:0 0 8px}
+.gate p{margin:0 0 16px;font-size:15px;line-height:1.6;color:var(--ink2)}
+.gate input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-size:16px;background:var(--panel);color:var(--ink)}
+.gate button{margin-top:12px;width:100%;border:0;border-radius:12px;padding:13px;font-size:16px;font-weight:700;background:var(--brand);color:var(--onbrand)}
+.gate .gm{margin:12px 0 0;color:#c0392b;font-size:14px;min-height:1em}
+.ghs{display:flex;align-items:center;gap:10px;font-size:13.5px;line-height:1.5;color:var(--ink2);padding:8px 14px}
+.ghs span{flex:1}
+.ghs.warn{color:#b4531f;font-weight:600}
+.ghs button{flex:none;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:9px;padding:5px 11px;font-size:13px}
+@media (max-width:860px){body.detail .ghs{display:none}}
+</style>
+<script>
+var GH = {repo:'kafutw/reply-data', tk:'', applied:[], q:[], wn:0, synced:'', ok:false, last:'', err:'', at:0};
+function ls(k, v){ try{ if(v === undefined) return localStorage.getItem(k); if(v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); }catch(e){ return null; } }
+GH.tk = ls('kafu-reply-tk') || '';
+try{ GH.q = JSON.parse(ls('kafu-reply-q') || '[]') || []; }catch(e){ GH.q = []; }
+function ghSaveQ(){ ls('kafu-reply-q', JSON.stringify(GH.q)); }
+function b64(s){ var b = new TextEncoder().encode(s), x = ''; for(var i = 0; i < b.length; i++) x += String.fromCharCode(b[i]); return btoa(x); }
+function ghApi(path, opt){
+  opt = opt || {};
+  var h = {'Authorization':'Bearer '+GH.tk, 'X-GitHub-Api-Version':'2022-11-28', 'Accept':opt.raw ? 'application/vnd.github.raw+json' : 'application/vnd.github+json'};
+  return fetch('https://api.github.com/repos/'+GH.repo+'/'+path+(opt.method ? '' : (path.indexOf('?') < 0 ? '?' : '&')+'t='+Date.now()),
+               {method:opt.method || 'GET', headers:h, cache:'no-store', body:opt.body ? JSON.stringify(opt.body) : undefined})
+    .then(function(r){
+      if(r.status === 401){ ghGate('通行碼失效或打錯了，請重新貼一次'); throw new Error('通行碼失效'); }
+      if(r.status === 404 && !opt.method) throw new Error('讀不到留言（通行碼可能沒勾到 reply-data 這個 repo）');
+      if(r.status === 403 || r.status === 404) throw new Error('這組通行碼沒有寫入權限（要選 Contents：Read and write）');
+      if(r.status === 409 || r.status === 422) throw Object.assign(new Error('GitHub 正在忙'), {again:true});
+      if(!r.ok) throw new Error('GitHub 回 '+r.status+'，等一下再試');
+      return opt.raw ? r.text() : r.json();
+    }, function(){ throw new Error('沒有網路，沒連上'); });
+}
+function ghPut(name, req, n){
+  return ghApi('contents/inbox/'+name, {method:'PUT', body:{message:'reply '+req.op, content:b64(JSON.stringify(req))}}).catch(function(e){
+    if(e.again && (n || 0) < 3) return new Promise(function(ok){ setTimeout(ok, 1500); }).then(function(){ return ghPut(name, req, (n || 0) + 1); });
+    throw e;
+  });
+}
+// 先在手機上把結果算出來（跟 iMac 同樣的動作），iMac 套用後再以 reply.json 為準
+function sim(req){
+  var it = D.items.filter(function(x){ return x.src === req.src && x.id === req.id; })[0];
+  if(!it) return {ok:true};
+  if(req.op === 'save'){ it.draft = req.draft; it.edited = true; }
+  else if(req.op === 'pick'){ var a = (it.alts || [])[req.idx]; if(a){ it.draft = a.text; it.altIdx = req.idx; it.edited = false; } }
+  else if(req.op === 'skip'){ if(it.state === 'open') it.state = 'skip'; }
+  else if(req.op === 'unskip'){ if(it.state === 'skip') it.state = 'open'; }
+  else if(req.op === 'send'){ it.state = 'queued'; it.sentText = req.text; it.draft = req.text; delete it.sendErr; }
+  else if(req.op === 'cancel'){ if(it.state === 'queued') it.state = 'open'; }
+  return {ok:true, item:it};
+}
+function ghRunning(){
+  if(GH.q.some(function(x){ return x.req.op === 'draftnow'; })) return {state:'running', step:'已交給家裡的 iMac，開著的話一兩分鐘內會開始抓留言和擬草稿'};
+  return D.job || {state:'idle'};
+}
+function ghPost(req){
+  if(req.op === 'jobstatus'){
+    if(Date.now() - GH.at < 15000 || document.hidden) return Promise.resolve({ok:true, job:ghRunning()});
+    return ghLoad().catch(function(){}).then(function(){ return {ok:true, job:ghRunning()}; });
+  }
+  if(!GH.tk){ ghGate(); return Promise.reject(new Error('要先貼通行碼')); }
+  var n = Date.now()+'-'+Math.random().toString(36).slice(2, 8)+'.json';
+  return ghPut(n, req).then(function(){
+    var res = sim(req);
+    GH.q.push({n:n, t:Date.now(), req:req}); ghSaveQ(); GH.wn = 0; ghStatus(); ghWatch();
+    if(req.op === 'draftnow') res.job = ghRunning();
+    return res;
+  });
+}
+function ghLoad(){
+  return ghApi('contents/reply.json', {raw:true}).then(function(t){
+    GH.at = Date.now();
+    var a = document.activeElement;
+    if(a && a.tagName === 'TEXTAREA') return;                 // 正在打字就先不換資料
+    if(t === GH.last){ ghPrune(); ghStatus(); return; }
+    var j = JSON.parse(t); GH.last = t; GH.ok = true; GH.err = '';
+    ['items','fetched','auth','accounts','max','job','me'].forEach(function(k){ if(j[k] !== undefined) D[k] = j[k]; });
+    D.quota = j.quota || {}; Object.keys(D.quota).forEach(function(k){ D.quota[k].wait = 0; });   // 手機按下去是進隊伍，不用等倒數
+    GH.applied = j.applied || []; GH.synced = j.synced || '';
+    ghPrune();
+    GH.q.forEach(function(x){ sim(x.req); });                  // iMac 還沒套用的動作再疊一次，畫面才不會倒退
+    render(); ghStatus();
+  });
+}
+function ghPrune(){ GH.q = GH.q.filter(function(x){ return GH.applied.indexOf(x.n) < 0 && Date.now() - x.t < 7 * 864e5; }); ghSaveQ(); }
+function ghWatch(){
+  clearTimeout(GH.w);
+  var busy = GH.q.length || D.items.some(function(x){ return x.state === 'queued'; });
+  if(!busy || document.hidden || GH.wn > 60) return;
+  GH.w = setTimeout(function(){ GH.wn++; ghLoad().catch(function(){}).then(ghWatch); }, 20000);
+}
+function ghStatus(){
+  var e = document.getElementById('ghS');
+  if(!e){
+    e = document.createElement('div'); e.id = 'ghS'; e.className = 'ghs'; e.innerHTML = '<span></span><button type="button">更新</button>';
+    document.getElementById('notice').before(e);
+    e.querySelector('button').addEventListener('click', function(){ ghLoad().then(function(){ toast('更新好了'); }).catch(function(x){ toast(x.message); }); });
+  }
+  var old = GH.synced && (Date.now() - new Date(GH.synced.replace(' ', 'T')).getTime()) > 3 * 36e5, t = [];
+  var nq = D.items.filter(function(x){ return x.state === 'queued'; }).length;
+  if(GH.err) t.push(GH.err);
+  if(old) t.push('家裡的 iMac 好像沒開（上次同步 '+GH.synced.slice(5)+'），可以先看留言、改草稿，排隊的會等它開機才慢慢送。');
+  if(nq) t.push('排隊中 '+nq+' 則：iMac 開著時每 3–8 分鐘送一則，不會一次全部送出。');
+  if(!t.length && GH.synced) t.push('上次同步 '+GH.synced.slice(5));
+  e.querySelector('span').textContent = t.join('　');
+  e.className = 'ghs'+(old || GH.err ? ' warn' : '');
+}
+function ghGate(msg){
+  var g = document.getElementById('gate');
+  if(!g){
+    g = document.createElement('div'); g.id = 'gate'; g.className = 'gate';
+    g.innerHTML = '<form class="gb" id="gF" autocomplete="off"><h2>留言回覆</h2><p>第一次在這支手機打開，要貼一次通行碼（github_pat_ 開頭的一長串），之後就不用再貼了。</p>'
+      +'<input id="gT" type="password" placeholder="貼上通行碼" aria-label="通行碼" autocapitalize="off" spellcheck="false"><button type="submit" id="gB">開始用</button><p class="gm" id="gM"></p></form>';
+    document.body.appendChild(g);
+    document.getElementById('gF').addEventListener('submit', function(ev){
+      ev.preventDefault(); var v = document.getElementById('gT').value.trim(), b = document.getElementById('gB'); if(!v) return;
+      GH.tk = v; b.disabled = true; b.textContent = '確認中…'; document.getElementById('gM').textContent = '';
+      ghLoad().then(function(){ ls('kafu-reply-tk', v); g.remove(); ghPing(); ghWatch(); }).catch(function(e){
+        GH.tk = ''; document.getElementById('gM').textContent = e.message || '讀不到留言'; }).then(function(){ b.disabled = false; b.textContent = '開始用'; });
+    });
+  }
+  document.getElementById('gM').textContent = msg || '';
+}
+// 資料超過 30 分鐘就請 iMac 補抓一次（只讀留言，不擬稿不送出）；iMac 沒開就等它開機再抓，30 分鐘內不重丟
+function ghPing(){
+  var f = Object.keys(D.fetched || {}).map(function(k){ return D.fetched[k] || 0; }), last = +(ls('kafu-reply-ping') || 0);
+  if(!f.length || Date.now() / 1000 - Math.min.apply(null, f) < 1800 || Date.now() - last < 18e5) return;
+  ls('kafu-reply-ping', String(Date.now()));
+  ghPost({op:'ping'}).catch(function(){});
+}
+document.addEventListener('click', function(ev){
+  if(!ev.target || ev.target.id !== 'cancelQ') return;
+  var it = find(sel); if(!it) return; ev.target.disabled = true;
+  ghPost({src:it.src, id:it.id, op:'cancel'}).then(function(){ toast('取消了，移回待回覆'); render(); }).catch(function(x){ ev.target.disabled = false; showErr(x.message); });
+});
+function ghBoot(){
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden && GH.tk){ GH.wn = 0; ghLoad().then(ghPing).catch(function(){}).then(ghWatch); } });
+  if(!GH.tk) return ghGate();
+  ghLoad().then(function(){ ghPing(); ghWatch(); }).catch(function(e){ GH.err = e.message || '讀不到留言'; ghStatus(); });
+}
+</script>
+<script>
+const D={"items": [], "fetched": {}, "auth": {"yt": "ok", "th": "ok", "ig": "ok"}, "accounts": {"yt": {"name": "好奇心研究所", "short": "YT"}, "th": {"name": "@yilan_kafka", "short": "Threads"}, "ig": {"name": "IG @yilan_kafka", "short": "IG"}}, "max": {"yt": 10000, "th": 500, "ig": 2200}, "quota": {}, "job": null, "me": ""};
+const TABS=[['open','待回覆'],['queued','排隊中'],['sugg','建議不回'],['sent','已送出'],['skip','略過'],['replied','回過了']];
+// 11/2 他：「可以明顯一點嗎？更有辨識性」→ 切換鈕加平台圖示，選到時換成各自代表色（YT 紅、Threads 黑、全部深綠）
+const ICON={
+  all:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
+  yt:'<svg viewBox="0 0 24 24"><rect x="1.5" y="4.5" width="21" height="15" rx="4.5" fill="currentColor"/><path class="play" d="M10 8.8v6.4l5.6-3.2z" fill="#fff"/></svg>',
+  th:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.2 11.1c-.1 0-.2-.1-.3-.1-.2-3-1.8-4.7-4.6-4.7h0c-1.7 0-3.1.7-3.9 2l1.5 1c.6-.9 1.6-1.1 2.4-1.1h0c.9 0 1.7.3 2.1.8.3.4.6 1 .6 1.7-.8-.1-1.6-.2-2.5-.1-2.5.1-4.1 1.6-4 3.6.1 1 .6 1.9 1.4 2.4.7.5 1.6.7 2.6.6 1.3-.1 2.3-.6 3-1.4.5-.7.9-1.5 1-2.6.6.4 1.1.8 1.3 1.4.4 1 .4 2.6-.9 3.9-1.2 1.2-2.6 1.7-4.7 1.7-2.4 0-4.2-.8-5.4-2.2-1.1-1.4-1.7-3.3-1.7-5.8s.6-4.4 1.7-5.8C6.6 4.8 8.4 4 10.8 4c2.4 0 4.2.8 5.4 2.2.6.7 1 1.6 1.3 2.6l1.8-.5c-.4-1.3-.9-2.4-1.7-3.3C16 3.1 13.7 2.1 10.8 2.1h0C7.8 2.1 5.6 3.1 4.1 4.9 2.8 6.6 2.1 9 2.1 12s.7 5.4 2 7.1c1.5 1.8 3.7 2.8 6.7 2.8h0c2.6 0 4.5-.7 6-2.2 2-2 1.9-4.5 1.3-6-.5-1.1-1.4-1.9-2.6-2.4l.1-.1zm-4.4 4.2c-1.1.1-2.2-.4-2.3-1.4-.1-.8.5-1.6 2.2-1.7h.7c.6 0 1.2.1 1.7.2-.2 2.4-1.3 2.9-2.3 2.9z"/></svg>',
+  ig:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.1" fill="currentColor" stroke="none"/></svg>'};
+const PAL=['#c8694a','#4f7fd6','#2f9470','#a35bc0','#c9932f','#d0577a','#3d8fa8','#7a8a3a'];
+const QS=new URLSearchParams(location.search);
+let src=['yt','th','ig'].includes(QS.get('src'))?QS.get('src'):'all',tab='open',sel=null,qTimer=null,saveT=null,toastT=null;
+const mobile=()=>matchMedia('(max-width:860px)').matches;
+const $=s=>document.querySelector(s);
+const key=it=>it.src+':'+it.id;
+function esc(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function when(iso){if(!iso)return'';const t=new Date(iso),m=(Date.now()-t)/60000;
+  if(m<60)return Math.max(1,Math.round(m))+' 分鐘前';if(m<1440)return Math.round(m/60)+' 小時前';
+  if(m<1440*30)return Math.round(m/1440)+' 天前';return t.toLocaleDateString('zh-TW')}
+function bucket(it){if(it.state==='queued')return 'queued';if(it.state==='open'||it.state==='sending')return it.skipSuggest?'sugg':'open';return it.state==='gone'?'skip':it.state}
+function kind(a){return !a?'':a.startsWith('🔴')?'red':a.startsWith('🟡')?'amber':a.startsWith('✅')?'green':'gray'}
+function color(n){let h=0;for(const c of n)h=(h*31+c.charCodeAt(0))>>>0;return PAL[h%PAL.length]}
+function av(it,lg){const n=it.author||'?',l=(n.replace(/^@/,'').replace(/[^a-z0-9一-鿿]/ig,'')[0]||'?').toUpperCase();
+  return `<div class="av${lg?' lg':''}" style="background:${color(n)}">${esc(l)}${it.avatar?`<img src="${esc(it.avatar)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</div>`}
+const PLAT={yt:'YouTube',th:'Threads',ig:'Instagram'};
+function acct(s){return `<span class="acct ${s}">${s==='yt'?'YT':s==='ig'?'IG':'Threads'}</span>`}
+function uname(it){return it.src==='yt'?it.author:'@'+it.author}
+function find(k){return D.items.find(x=>key(x)===k)}
+function items(){return D.items.filter(it=>(src==='all'||it.src===src)&&bucket(it)===tab)}
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200)}
+const post=ghPost;
+const fmt=t=>t?new Date(t*1000).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'還沒抓過';
+
+/* ---------- 頂欄 ---------- */
+function head(){
+  $('#sub').textContent=`YT ${fmt(D.fetched.yt)}・Threads ${fmt(D.fetched.th)}${D.auth.ig==='noauth'?'':'・IG '+fmt(D.fetched.ig)} 抓的・送出一定要你自己按`;
+  const c={all:0,yt:0,th:0,ig:0};D.items.forEach(it=>{if(bucket(it)==='open'){c.all++;c[it.src]++}});
+  $('#src').innerHTML=[['all','全部'],['yt','YouTube'],['th','Threads'],['ig','IG']].map(([k,n])=>`<button class="${k===src?'on':''}" data-s="${k}">${ICON[k]}${n}<b>${c[k]}</b></button>`).join('');
+  document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{src=b.dataset.s;sel=null;history.replaceState(null,'',src==='all'?'?':'?src='+src);render()});
+  const bad=[];if(D.auth.yt!=='ok')bad.push('YouTube 授權失效，要在 iMac 終端機跑 python3 ~/bin/kafu_ytc.py auth（選好奇心研究所）');
+  $('#notice').innerHTML=bad.map(m=>`<div class="notice">⚠️ ${esc(m)}</div>`).join('');
+  if(D.auth.th!=='ok')setup('th');
+  if(D.auth.ig!=='ok'&&(src==='ig'||src==='all'))setup('ig');
+  meters();
+}
+function meters(){
+  const qs=src==='ig'?'ig':'th',q=(D.quota||{})[qs],el=$('#meters');if(!q||D.auth[qs]!=='ok'||src==='yt'){el.style.display='none';return}
+  el.style.display='';
+  const m=(lbl,n,max)=>{const p=Math.min(100,n/max*100);return `<div class="meter${n>=max?' full':p>=70?' hot':''}"><div class="l"><span>${lbl}</span><b>${n}／${max}</b></div><div class="t"><i style="width:${p}%"></i></div></div>`};
+  el.innerHTML=`<div class="cap" title="每則至少隔 ${q.gap} 秒、同一篇一小時最多 ${q.perPost} 則、不能送跟最近幾乎一樣的話">🛡️ ${qs==='ig'?'IG':'Threads'}<br>防呆</div>`+m('這一小時',q.hour,q.perHour)+m('24 小時',q.day,q.perDay);
+  sendState();
+  clearTimeout(qTimer);if(q.wait>0)qTimer=setTimeout(()=>{q.wait--;meters()},1000);
+}
+const SETUP={
+  th:{name:'Threads',steps:`<li>Meta 後台 →「使用案例」→ 存取 Threads API →「設定」，最下面「用戶權杖產生器」yilan_kafka 那列按「產生存取權杖」</li>
+    <li>勾「我瞭解」，按「複製」</li>`},
+  ig:{name:'IG',steps:`<li>Meta 後台「脆留言回覆小幫手」→「應用程式角色 → 角色」→ 新增用戶 → Instagram 測試人員 → yilan_kafka；IG 那邊到「設定 → 網站權限 → 應用程式和網站 → 測試人員邀請」接受</li>
+    <li>「使用案例」→ Instagram API「自訂」→「API setup with Unified login」</li>
+    <li>第 2 步「產生存取權杖」→「新增帳號」登入 yilan_kafka，回來按「產生權杖」，勾「我瞭解」、按「複製」</li>`}};
+function setup(s){$('#notice').insertAdjacentHTML('beforeend',`<div class="notice">⚠️ ${SETUP[s].name} 權杖要更新，請回 iMac 工作台的留言回覆頁貼（權杖不經過手機）</div>`);return;const S=SETUP[s];
+  $('#notice').insertAdjacentHTML('beforeend',`<div class="setup"><h2>${D.auth[s]==='expiring'?S.name+' 權杖快到期了，重新貼一次':'連上卡夫卡的 '+S.name+' 帳號'}</h2>
+    <ol>${S.steps}<li>貼到下面，按「連上 ${S.name}」（權杖只存在 iMac，不會傳給任何人）</li></ol>
+    <input id="pasted-${s}" type="password" placeholder="貼上 ${S.name} 權杖" autocomplete="off"><button class="send" id="connect-${s}">連上 ${S.name}</button></div>`);
+  $('#connect-'+s).onclick=async e=>{e.target.disabled=true;e.target.textContent='連線中…';
+    try{const j=await post({src:s,op:'connect',pasted:$('#pasted-'+s).value});toast(j.msg);setTimeout(()=>location.reload(),800)}
+    catch(x){toast(x.message);e.target.disabled=false;e.target.textContent='連上 '+S.name}};
+}
+
+/* ---------- 清單 ---------- */
+function side(){
+  const c={};D.items.forEach(it=>{if(src==='all'||it.src===src){const b=bucket(it);c[b]=(c[b]||0)+1}});
+  $('#seg').innerHTML=TABS.map(([k,n])=>`<button class="${k===tab?'on':''}" data-t="${k}">${n}<b>${c[k]||0}</b></button>`).join('');
+  document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{tab=b.dataset.t;sel=null;render()});
+  const L=items();
+  if(!sel||!L.some(x=>key(x)===sel))sel=L.length?key(L[0]):null;
+  $('#list').innerHTML=L.length?L.map(it=>{const k=kind(it.advice),bad=(it.draft||'').includes('待補');
+    const pill=it.state==='queued'?'<span class="pill amber">排隊中</span>':it.state==='sent'?'<span class="pill green">已送出</span>':bad||k==='red'?'<span class="pill red">要補</span>':k==='amber'?'<span class="pill amber">小心</span>':'';
+    return `<div class="li${key(it)===sel&&!mobile()?' on':''}" data-k="${esc(key(it))}">${av(it)}<div class="bd">
+      <div class="nm">${acct(it.src)}<span class="u">${esc(uname(it))}</span>${pill}<time>${when(it.published)}</time></div>
+      <div class="pv">${esc(it.text)}</div><div class="pp">${it.src==='yt'?'🎬':it.src==='ig'?'📷':'🧵'} ${esc(it.ptext)}</div></div></div>`}).join('')
+    :`<div class="empty">${!GH.ok?'讀取中…':tab==='open'?'🎉 都回完了':'這裡沒有留言'}</div>`;
+  document.querySelectorAll('.li').forEach(r=>r.onclick=()=>{sel=r.dataset.k;if(mobile()){openDetail()}else render()});
+}
+function openDetail(){document.body.classList.add('detail');pane();scrollTo(0,0);history.pushState({d:1},'')}
+function closeDetail(){document.body.classList.remove('detail');render();const on=document.querySelector(`.li[data-k="${CSS.escape(sel||'')}"]`);if(on)on.scrollIntoView({block:'center'})}
+addEventListener('popstate',()=>{if(document.body.classList.contains('detail'))closeDetail()});
+
+/* ---------- 單則 ---------- */
+function pane(){
+  const el=$('#pane'),it=sel&&find(sel);
+  if(!it){el.innerHTML=`<div class="in"><div class="empty" style="padding-top:120px">${tab==='open'?'沒有待回覆的留言，等下一次抓留言吧':'左邊選一則來看'}</div></div>`;return}
+  const b=bucket(it),A=D.accounts[it.src];
+  const others=(it.others||[]).length?`<div class="others">${it.others.map(o=>`<div class="${o.own?'own':''}"><b>${o.own?'你':esc(it.src==='yt'?o.author:'@'+o.author)}</b>：${esc(o.text)}</div>`).join('')}</div>`:'';
+  let body='',foot='';
+  if(b==='queued'){
+    body=`<div class="sentbox"><div class="h">⏳ 排隊中，${it.qpos?'前面還有 '+it.qpos+' 則，':''}iMac 開著時會慢慢送</div><div class="x">${esc(it.sentText)}</div></div>`;
+    foot=`<button class="ghost" id="cancelQ">取消排隊</button><span class="sp"></span>${navBtns()}`;
+  }else if(b==='sent'){
+    body=`<div class="sentbox"><div class="h">✓ 已用 ${esc(A.name)} 送出・${esc(fmt(it.sentAt))}</div><div class="x">${esc(it.sentText)}</div></div>`;
+    foot=`<span class="sp"></span>${navBtns()}`;
+  }else if(b==='replied'){
+    body=`<div class="tip gray">你已經在 ${it.src==='yt'?'YouTube Studio':PLAT[it.src]} 上回過這則了。</div>`;foot=`<span class="sp"></span>${navBtns()}`;
+  }else{
+    const alts=it.alts||[],ai=it.altIdx||0;
+    body=(it.sendErr?`<div class="tip red">上次沒送出：${esc(it.sendErr)}</div>`:'')+(it.advice?`<div class="tip ${kind(it.advice)}">${esc(it.advice)}</div>`:'')+
+      `<div class="lbl">你的回覆（${esc(A.name)}）<span>${alts.length?'點標籤換說法':''}</span></div>`+
+      (it.src==='ig'&&it.top&&it.top!==it.id?`<div class="tip gray">IG 只能回到這串最上面，送出時開頭會自動加「@${esc(it.author)}」，他才收得到通知。</div>`:'')+
+      (alts.length?`<div class="chips">${alts.map((a,k)=>`<button data-alt="${k}" class="${k===ai&&!it.edited?'on':''}">${esc(a.type)}</button>`).join('')}<button class="more" data-more>＋ 再想 5 種</button></div>`:'')+
+      `<textarea id="ta" placeholder="還沒有草稿，可以自己寫">${esc(it.draft)}</textarea><div class="meta" id="meta"></div>`;
+    foot=`<button class="ghost" id="skipBtn">${b==='skip'?'↩ 移回待回覆':'略過不回'}</button><span class="sp"></span>${navBtns()}<button class="send" id="sendBtn"></button>`;
+  }
+  el.innerHTML=`<div class="back"><button id="backBtn">← 清單</button><span class="sp"></span>${acct(it.src)}</div><div class="in">
+    <div class="ctx"><span class="k">${it.src==='yt'?'影片':'我的貼文'}</span><div><a href="${esc(it.purl)}" target="_blank" rel="noopener">${esc(it.ptext||'（看原文）')}</a>${it.to?`<span class="to">↳ 他回的是你這則：${esc(it.to)}</span>`:''}</div></div>
+    <div class="who">${av(it,1)}<div><div class="n">${esc(uname(it))} ${acct(it.src)}</div><div class="m">${when(it.published)}${it.likes?'・👍 '+it.likes:''}${it.url?` ・ <a href="${esc(it.url)}" target="_blank" rel="noopener">在 ${PLAT[it.src]} 打開</a>`:''}</div></div></div>
+    <div class="ctext">${esc(it.text)}</div>${others}<div class="divider"></div>${body}</div>
+    <div class="err" id="err"></div><div class="foot">${foot}</div>`;
+  $('#backBtn').onclick=()=>history.back();
+  bindPane(it);
+}
+function navBtns(){const L=items(),i=L.findIndex(x=>key(x)===sel);
+  return `<div class="nav"><button class="btn" data-go="-1" ${i<=0?'disabled':''} title="上一則">↑</button><button class="btn" data-go="1" ${i>=L.length-1?'disabled':''} title="下一則">↓</button></div>`}
+function go(d){const L=items(),i=L.findIndex(x=>key(x)===sel);const n=L[i+d];if(n){sel=key(n);render()}}
+function showErr(m){const e=$('#err');if(!e)return;e.textContent=m;e.classList.toggle('show',!!m)}
+function maxOf(it){return D.max[it.src]}
+function metaUpd(){const t=$('#ta'),m=$('#meta'),it=find(sel);if(!t||!m||!it)return;const v=t.value.trim(),bad=v.includes('待補'),over=v.length>maxOf(it);
+  t.classList.toggle('bad',bad||over);
+  m.innerHTML=`<span>${bad?'<span class="warn">還有【待補】，換成真的內容才能送</span>':over?'<span class="warn">超過 '+maxOf(it)+' 字</span>':(it.edited?'<span class="ok">已存成你的版本</span>':'')}</span><span>${v.length}${it.src!=='yt'?'／'+maxOf(it):''} 字</span>`;
+  sendState()}
+function sendState(){const b=$('#sendBtn'),t=$('#ta'),it=sel&&find(sel);if(!b||!it||b.dataset.busy)return;const A=D.accounts[it.src];
+  const q=it.src!=='yt'?((D.quota||{})[it.src]||{wait:0}):{wait:0};
+  const v=t?t.value.trim():'',bad=!v||v.includes('待補')||v.length>maxOf(it);
+  if(q.wait>0){b.disabled=true;b.classList.remove('confirm');b.innerHTML=`再等 ${q.wait>=120?Math.ceil(q.wait/60)+' 分鐘':q.wait+' 秒'}<small>${it.src==='ig'?'IG':'Threads'} 防呆</small>`;return}
+  b.disabled=bad;if(!b.classList.contains('confirm'))b.innerHTML=`排入送出<small>用 ${esc(A.name)}</small>`}
+function bindPane(it){
+  document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(+b.dataset.go));
+  const t=$('#ta');if(!t)return;
+  metaUpd();
+  const base={src:it.src,id:it.id};
+  t.oninput=()=>{metaUpd();clearTimeout(saveT);saveT=setTimeout(save,1500)};
+  async function save(){try{await post({...base,op:'save',draft:t.value});it.draft=t.value;it.edited=true;metaUpd();
+    document.querySelectorAll('[data-alt]').forEach(c=>c.classList.remove('on'))}catch(x){showErr('存檔失敗：'+x.message)}}
+  document.querySelectorAll('[data-alt]').forEach(c=>c.onclick=async()=>{
+    if(it.edited&&t.value.trim()&&!confirm('你改過的字會被換掉，確定要換？'))return;
+    try{const j=await post({...base,op:'pick',idx:+c.dataset.alt});Object.assign(it,j.item);pane()}catch(x){showErr(x.message)}});
+  const mb=$('[data-more]');if(mb)mb.onclick=async()=>{mb.disabled=true;mb.textContent='交給 iMac 中…';
+    try{const j=await post({...base,op:'more'});Object.assign(it,j.item);toast('已交給 iMac 想新說法，一兩分鐘後會出現');pane()}
+    catch(x){showErr(x.message);mb.disabled=false;mb.textContent='＋ 再想 5 種'}};
+  $('#skipBtn').onclick=async()=>{const op=bucket(it)==='skip'?'unskip':'skip';const L=items(),i=L.findIndex(x=>key(x)===key(it));
+    try{const j=await post({...base,op});Object.assign(it,j.item);toast(op==='skip'?'已略過，到「略過」可以移回來':'已移回待回覆');
+      const R=items();sel=R.length?key(R[Math.min(i,R.length-1)]):null;after()}catch(x){showErr(x.message)}};
+  const sb=$('#sendBtn');let armT=null;
+  sb.onclick=async()=>{
+    if(!sb.classList.contains('confirm')){sb.classList.add('confirm');sb.innerHTML=`確定送出？再按一次<small>用 ${esc(D.accounts[it.src].name)}</small>`;showErr('');
+      clearTimeout(armT);armT=setTimeout(()=>{if(sb.isConnected){sb.classList.remove('confirm');sendState()}},3500);return}
+    clearTimeout(armT);clearTimeout(saveT);const text=t.value.trim();
+    sb.dataset.busy=1;sb.disabled=true;sb.classList.remove('confirm');sb.innerHTML='排入中…';
+    const L=items(),i=L.findIndex(x=>key(x)===key(it));
+    try{const j=await post({...base,op:'send',text});Object.assign(it,j.item);if(j.quota){D.quota=D.quota||{};D.quota[it.src]=j.quota;meters()}toast('已排隊，iMac 會慢慢送出');
+      const R=items();sel=R.length?key(R[Math.min(i,R.length-1)]):null;after()}
+    catch(x){delete sb.dataset.busy;showErr('沒有送出：'+x.message);sendState()}};
+}
+function after(){if(mobile()&&document.body.classList.contains('detail')&&sel){head();side();pane();scrollTo(0,0)}else if(mobile()){history.back()}else render()}
+
+function render(){head();side();if(!mobile())pane();else if(document.body.classList.contains('detail'))pane();
+  const on=document.querySelector('.li.on');if(on)on.scrollIntoView({block:'nearest'})}
+/* 11/2 他：「放一個按鈕，我按下去你就自動幫我擬回覆」→ 背景 kafu_reply_job.py（抓兩邊新留言＋叫 Claude 擬稿，只擬不送） */
+let jobT=null,jobSeen=0;
+function jobBar(j){const el=$('#jobbar'),b=$('#refetch');if(!j){el.innerHTML='';return}
+  const run=j.state==='running';b.disabled=run;b.textContent=run?'擬稿中…':'✨ 抓新留言＋擬草稿';
+  const ago=j.finished?Math.round((Date.now()/1000-j.finished)/60):0;
+  if(run)el.innerHTML=`<div class="run"><span class="spin"></span>${esc(j.step||'處理中…')}　可以先看別的，好了會自動更新</div>`;
+  else if(j.state==='error'&&ago<60)el.innerHTML=`<div class="bad">⚠️ ${esc(j.msg)}<button class="x" onclick="this.parentNode.remove()">✕</button></div>`;
+  else if(j.state==='done'&&ago<10&&jobSeen)el.innerHTML=`<div class="ok">✓ ${esc(j.msg)}<button class="x" onclick="this.parentNode.remove()">✕</button></div>`;
+  else el.innerHTML=''}
+async function pollJob(){clearTimeout(jobT);try{const r=await post({op:'jobstatus'});const j=r.job;
+  if(j.state==='running'){jobSeen=1;jobBar(j);jobT=setTimeout(pollJob,3000);return}
+  if(jobSeen){sessionStorage.setItem('kafu-job-done','1');location.reload();return}
+  jobBar(j)}catch(x){jobT=setTimeout(pollJob,6000)}}
+$('#refetch').onclick=async()=>{const b=$('#refetch');b.disabled=true;b.textContent='擬稿中…';
+  try{const r=await post({op:'draftnow'});jobSeen=1;jobBar(r.job);jobT=setTimeout(pollJob,2500)}
+  catch(x){toast(x.message);b.disabled=false;b.textContent='✨ 抓新留言＋擬草稿'}};
+try{if(sessionStorage.getItem('kafu-job-done')){sessionStorage.removeItem('kafu-job-done');jobSeen=1}}catch(e){}
+jobBar(D.job);if(D.job&&D.job.state==='running'){jobSeen=1;pollJob()}
+document.addEventListener('keydown',e=>{if(/TEXTAREA|INPUT/.test(e.target.tagName)||e.metaKey||e.ctrlKey||mobile())return;
+  if(e.key==='ArrowDown'||e.key==='j'){e.preventDefault();go(1)}if(e.key==='ArrowUp'||e.key==='k'){e.preventDefault();go(-1)}});
+render();ghBoot();
+</script>
+</body>
+</html>
